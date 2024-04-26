@@ -1,0 +1,52 @@
+{
+    "content_security_policy": {
+        "extension_pages": "script-src 'self'; object-src 'self'"
+    },
+    "manifest_version": 3,
+    "name": "Deepl-sender",
+    "description": "Обертка для перевода и удобного чтения на https://www.deepl.com/translator",
+    "version": "0.0.1",
+    "background": {
+        "service_worker": "background.js"
+    },
+    "action": {
+        "default_popup": "popup.html"
+    },
+    "content_scripts": [
+        {
+            "matches": [
+                "https://www.deepl.com/translator"
+            ],
+            "js": [
+                "deepl.js"
+            ]
+        },
+        {
+            "matches": [
+                "https://novelbin.org/*",
+                "https://noveltop1.org/*",
+                "https://novelmax.net/*",
+                "https://novelextra.com/*",
+                "https://novelbin.app/*",
+                "https://top1novels.com/*"
+            ],
+            "js": [
+                "novelbin.js"
+            ]
+        }
+    ],
+    "permissions": [
+        "activeTab",
+        "tabs",
+        "storage",
+        "scripting",
+        "clipboardWrite",
+        "declarativeContent"
+    ],
+    "host_permissions": [
+        "https://www.deepl.com/*"
+    ],
+    "optional_host_permissions": [
+        "https://*/*"
+    ]
+}
