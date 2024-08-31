@@ -6,16 +6,39 @@ function sleep(ms) {
 
 const manifest = chrome.runtime.getManifest()
 const arr = manifest.content_scripts[1].matches
-console.log({ manifest, arr })
+console.log({ dt: new Date(), manifest, arr })
+
+async function addContentScript(url, tabId) {
+    const tabs2 = await chrome.tabs.query({ url })
+    for (let tab of tabs2) {
+        if (!tab.id) continue
+        tabId = tab.id
+    }
+    console.log({ url, tabId, tabs2 })
+    if (url.includes('https://www.deepl.com/')) {
+        chrome.tabs.sendMessage(tabId, { command: 'recreate_try' })
+        /*
+        chrome.scripting.executeScript({
+            target: { tabId },
+            files: ['deepl.js']
+        })
+            */
+    } else {
+        chrome.scripting.executeScript({
+            target: { tabId },
+            files: ['novelbin.js']
+        })
+    }
+}
 
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-    console.log(request, sender)
+    console.log({ dt: new Date(), request, sender })
     if (request.print) {
-        console.log(request.print)
+        console.log({ dt: new Date(), print: request.print })
     } else if (request.command == 'load_content') {
         ;(async () => {
             const dynamicHosts = await chrome.scripting.getRegisteredContentScripts()
-            console.log({ dynamicHosts, test: [...arr, ...dynamicHosts[0].matches] })
+            console.log({ dt: new Date(), dynamicHosts, test: [...arr, ...dynamicHosts[0].matches] })
 
             //main hosts
             table = []
@@ -30,7 +53,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                 sendResponse({ text: 'no_host_permissions', array: additional_origins })
                 return true
             }
-            console.log(tabs)
+            console.log({ dt: new Date(), tabs })
             for (let tab of tabs) {
                 if (!tab.id) continue
 
@@ -53,7 +76,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                         }
                         break
                     } catch (e) {
-                        console.log(e)
+                        console.log({ dt: new Date(), e })
                         //console.error(e, 'tab', JSON.stringify(tab))
                     }
                     await sleep(1000)
@@ -77,11 +100,8 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         sendResponse(table)
     } else if (request.command == 'add_script') {
         //if (request.tab.url)
-        console.log('add script to', { request })
-        chrome.scripting.executeScript({
-            target: { tabId: request.tab.id },
-            files: ['novelbin.js']
-        })
+        console.log({ dt: new Date(), message: 'add script to', request })
+        addContentScript(request.tab.url, request.tab.id)
 
         sendResponse('was sent')
     } else if (request.command == 'trigger_listener') {
@@ -95,14 +115,14 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 let update_flag = false
 async function register(array) {
     const old = await chrome.scripting.getRegisteredContentScripts()
-    console.log({ array, old, update_flag })
+    console.log({ dt: new Date(), array, old, update_flag })
 
     if (update_flag) {
         await chrome.scripting.unregisterContentScripts({
             ids: ['novelbin-script-additional-by-storage']
         })
         const old2 = await chrome.scripting.getRegisteredContentScripts()
-        console.log({ old2 })
+        console.log({ dt: new Date(), old2 })
     }
 
     try {
@@ -115,7 +135,7 @@ async function register(array) {
         ])
         update_flag = true
     } catch (err) {
-        console.error(`failed to register content scripts: ${err}`)
+        console.error(new Date() + ` failed to register content scripts: ${err}`)
     }
 }
 

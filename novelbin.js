@@ -6,14 +6,16 @@
 
 console.log('trying loading novelbin.js')
 
+getContent = () => Array.from(document.querySelectorAll('#chr-content p'), (p) => p.textContent.trim())
+
 if (document.querySelector('#nav div.navbar-header a')?.innerText.trim() == 'NOVEL BIN') {
     let array = []
 
     //need to load-listener '.comments script' before executing
     console.log('added window listener')
-    window.addEventListener('load', function () {
+    const insideListenerFunction = function () {
         console.log('inside old main loading novelbin.js')
-        array = Array.from(document.querySelectorAll('#chr-content p'), (p) => p.textContent.trim())
+        array = getContent()
 
         const replaceScript = document.querySelector('.comments script')
         if (!replaceScript) {
@@ -39,7 +41,9 @@ if (document.querySelector('#nav div.navbar-header a')?.innerText.trim() == 'NOV
         const number = chapterNode.lastElementChild.textContent.match(/(\d+)/)?.[0]
         place.textContent = number
         */
-    })
+    }
+
+    window.addEventListener('after_size_loaded', insideListenerFunction)
 
     let splitLessN, div, last_size
 
@@ -75,6 +79,9 @@ if (document.querySelector('#nav div.navbar-header a')?.innerText.trim() == 'NOV
         last_size = size
         calc(size)
         console.log('first get', size, splitLessN)
+
+        const event = new Event('after_size_loaded')
+        window.dispatchEvent(event)
     })
     chrome.storage.local.onChanged.addListener(function (changes) {
         if (changes?.size?.newValue) {

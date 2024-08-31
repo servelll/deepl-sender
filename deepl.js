@@ -1,5 +1,5 @@
 const div2 = document.createElement('div')
-const dTextarea = document.querySelector('d-textarea')
+let dTextarea = document.querySelector('d-textarea')
 function draw_ui(input) {
     div2.innerHTML = ''
     for (let page of input) {
@@ -22,11 +22,16 @@ function draw_ui(input) {
     }
 }
 
-window.addEventListener('load', () => {
+console.log('loaded deepl.js')
+
+function add_elements() {
+    dTextarea = document.querySelector('d-textarea')
+
     const place =
         document.querySelector('main > script') ??
         document.querySelector('nav:not([class]) > div > div:not([class])') ??
         document.querySelector('nav > div > div')
+    console.log('window.load deepl.js', { place })
     const div = document.createElement('div')
     div.className = 'flex flex-row gap-[10px] px-6 min-[1280px]:px-0'
     place.parentNode.insertBefore(div, place)
@@ -64,13 +69,16 @@ window.addEventListener('load', () => {
     div.appendChild(z)
     div.appendChild(button)
     div.appendChild(div2)
-})
+}
+window.addEventListener('load', add_elements)
 
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     console.log(request, sender)
 
     if (request.command == 'write_table_paste_text') {
         draw_ui(request.table)
+    } else if (request.command == 'recreate_try') {
+        add_elements()
     } else {
         throw Error('wrong command')
     }

@@ -32,7 +32,7 @@ hosts.onclick = async () => {
     })
     console.log({ granted })
     if (granted) {
-        load_content_actions()
+        //load_content_actions()
     }
 }
 
@@ -52,12 +52,18 @@ size_button.onclick = async function () {
 chrome.storage.local.get('size').then((loaded_size) => {
     if (loaded_size.size) size_button.textContent = 'size ' + loaded_size.size
 })
-chrome.storage.local.get('domains').then((r) => {
+chrome.storage.local.get('domains').then(async (r) => {
     if (r.domains) {
-        hosts.title = 'domains: ' + r.domains.join(',')
+        const tabs = await chrome.tabs.query({ active: true, lastFocusedWindow: true })
+        const thisDomain = new URL(tabs[0].url).origin
+        r.domains.push(thisDomain)
+
+        hosts.title = 'domains: ' + domains.join(',')
         domains = r.domains
             .map((a) => (a.includes('://') ? a : 'https://' + a))
             .map((a) => (a.endsWith('/') ? a : a + '/'))
+
+        console.log({ tabs, thisDomain, domains })
     }
 })
 
