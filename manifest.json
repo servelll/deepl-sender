@@ -28,7 +28,10 @@
                 "https://novelmax.net/*",
                 "https://novelextra.com/*",
                 "https://novelbin.app/*",
-                "https://top1novels.com/*"
+                "https://novelbin.phieuvu.com/*",
+                "https://top1novels.com/*",
+                "https://novelbin.lanovels.org/*",
+                "https://novelbjn.lanovels.org/*"
             ],
             "js": [
                 "novelbin.js"

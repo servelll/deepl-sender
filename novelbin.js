@@ -22,12 +22,12 @@ if (document.querySelector('#nav div.navbar-header a')?.innerText.trim() == 'NOV
             console.log({ replaceScript, array })
             return
         }
-        const replaceMatch = replaceScript.textContent.match(/(?<=ent.replace\(\")[^\"]+/g)
-        if (!replaceMatch) throw Error('somehow blank replace now')
-        const replaceText = decode(replaceMatch?.[0]) ?? ''
-        array = array.map((t) => t.replace(replaceText, ''))
+        //const replaceMatch = replaceScript.textContent.match(/(?<=ent.replace\(\")[^\"]+/g)
+        //if (!replaceMatch) throw Error('somehow blank replace now')
+        //const replaceText = decode(replaceMatch?.[0]) ?? ''
+        //array = array.map((t) => t.replace(replaceText, ''))
 
-        console.log({ replaceScript, replaceMatch, replaceText, array })
+        //console.log({ replaceScript, replaceMatch, replaceText, array })
         console.log(document.querySelector('#chr-content').innerHTML)
 
         calc(last_size)

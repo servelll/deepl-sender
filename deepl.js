@@ -24,6 +24,29 @@ function draw_ui(input) {
 
 console.log('loaded deepl.js')
 
+function calc(v, array) {
+    let splitLessN = [{ current: [] }]
+    let index = 0,
+        sum = 0
+    array.forEach((current) => {
+        if (current != '') {
+            if (sum + current.length + 1 > v) {
+                splitLessN[index].nextSum = sum + current.length + 1
+                index++
+                sum = 0
+                splitLessN[index] = { current: [] }
+            } else {
+                sum++
+            }
+            sum += current.length
+            splitLessN[index].current.push(current)
+            splitLessN[index].sum = sum
+        }
+    })
+
+    return splitLessN
+}
+
 function add_elements() {
     dTextarea = document.querySelector('d-textarea')
 
@@ -38,6 +61,20 @@ function add_elements() {
 
     const z = document.createElement('z')
     z.id = 'my_p'
+
+    const z2 = document.createElement('z')
+    z2.id = 'my_p2'
+    z2.textContent = 'add from clipboard'
+    z2.onclick = () => {
+        setTimeout(async () => {
+            const text = await navigator.clipboard.readText()
+            /*
+            dTextarea.firstElementChild.textContent = text
+            dTextarea.dispatchEvent(new Event('change', { bubbles: true }))
+            */
+            draw_ui([{ title: 'clipboard', splitLessN: calc(5000, text.split('\\n')) }])
+        })
+    }
 
     const button = document.createElement('button')
     button.id = 'my_button'
@@ -67,6 +104,7 @@ function add_elements() {
         })
     }
     div.appendChild(z)
+    div.appendChild(z2)
     div.appendChild(button)
     div.appendChild(div2)
 }
