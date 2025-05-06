@@ -23,6 +23,7 @@
         },
         {
             "matches": [
+                "https://novelbin.com/*",
                 "https://novelbin.org/*",
                 "https://noveltop1.org/*",
                 "https://novelmax.net/*",
@@ -31,7 +32,8 @@
                 "https://novelbin.phieuvu.com/*",
                 "https://top1novels.com/*",
                 "https://novelbin.lanovels.org/*",
-                "https://novelbjn.lanovels.org/*"
+                "https://novelbjn.lanovels.org/*",
+                "https://www.royalroad.com/*"
             ],
             "js": [
                 "novelbin.js"

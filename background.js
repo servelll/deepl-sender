@@ -135,7 +135,8 @@ async function register(array) {
         ])
         update_flag = true
     } catch (err) {
-        console.error(new Date() + ` failed to register content scripts: ${err}`)
+        if (!err.message.includes('must specify at least one match.'))
+            console.error(new Date() + ` failed to register content scripts: ${err}`)
     }
 }
 

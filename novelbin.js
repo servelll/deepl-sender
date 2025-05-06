@@ -6,9 +6,12 @@
 
 console.log('trying loading novelbin.js')
 
-getContent = () => Array.from(document.querySelectorAll('#chr-content p'), (p) => p.textContent.trim())
+isRoyalRoad = () => document.querySelector("meta[property='og:site_name']")?.getAttribute('content') == 'Royal Road'
+isNovelBin = () => document.querySelector('#nav div.navbar-header a')?.innerText.trim() == 'NOVEL BIN'
+getContent = () =>
+    Array.from(document.querySelectorAll('#chr-content p, .chapter-content p'), (p) => p.textContent.trim())
 
-if (document.querySelector('#nav div.navbar-header a')?.innerText.trim() == 'NOVEL BIN') {
+if (isNovelBin() || isRoyalRoad()) {
     let array = []
 
     //need to load-listener '.comments script' before executing
@@ -20,7 +23,7 @@ if (document.querySelector('#nav div.navbar-header a')?.innerText.trim() == 'NOV
         const replaceScript = document.querySelector('.comments script')
         if (!replaceScript) {
             console.log({ replaceScript, array })
-            return
+            //return
         }
         //const replaceMatch = replaceScript.textContent.match(/(?<=ent.replace\(\")[^\"]+/g)
         //if (!replaceMatch) throw Error('somehow blank replace now')
@@ -28,7 +31,7 @@ if (document.querySelector('#nav div.navbar-header a')?.innerText.trim() == 'NOV
         //array = array.map((t) => t.replace(replaceText, ''))
 
         //console.log({ replaceScript, replaceMatch, replaceText, array })
-        console.log(document.querySelector('#chr-content').innerHTML)
+        //console.log(document.querySelector('#chr-content').innerHTML)
 
         calc(last_size)
 
@@ -47,7 +50,7 @@ if (document.querySelector('#nav div.navbar-header a')?.innerText.trim() == 'NOV
 
     let splitLessN, div, last_size
 
-    const place = document.querySelector('#chr-nav-top > div')
+    const place = document.querySelector('#chr-nav-top > div, div.row.nav-buttons')
     div = document.createElement('div')
     div.style = 'display: flex; justify-content: center; grid-gap: 12px'
     if (place) place.parentNode.appendChild(div)
@@ -94,7 +97,7 @@ if (document.querySelector('#nav div.navbar-header a')?.innerText.trim() == 'NOV
         console.log(request, sender)
 
         if (request.command == 'grab_text') {
-            const title = document.querySelector('#chapter .chr-text')?.innerText
+            const title = document.querySelector('#chapter .chr-text, div.page-container h1')?.innerText
             sendResponse({ title, splitLessN })
         } else {
             throw Error('wrong command')
