@@ -72,7 +72,11 @@ function add_elements() {
             dTextarea.firstElementChild.textContent = text
             dTextarea.dispatchEvent(new Event('change', { bubbles: true }))
             */
-            draw_ui([{ title: 'clipboard', splitLessN: calc(5000, text.split('\\n')) }])
+            let result = [text]
+            while (result.some((item) => typeof item === 'string' && item.includes('\n'))) {
+                result = result.flatMap((item) => (typeof item === 'string' ? item.split('\n') : item))
+            }
+            draw_ui([{ title: 'clipboard', splitLessN: calc(5000, result) }])
         })
     }
 

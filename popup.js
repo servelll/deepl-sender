@@ -54,7 +54,7 @@ chrome.storage.local.get('size').then((loaded_size) => {
 })
 chrome.storage.local.get('domains').then(async (r) => {
     if (r.domains) {
-        const tabs = await chrome.tabs.query({ active: true, lastFocusedWindow: true })
+        const tabs = await chrome.tabs.query({ active: true, currentWindow: true })
         const thisDomain = new URL(tabs[0].url).origin
         r.domains.push(thisDomain)
 
@@ -68,7 +68,7 @@ chrome.storage.local.get('domains').then(async (r) => {
 })
 
 document.getElementById('add_script').addEventListener('click', async function () {
-    const tabs = await chrome.tabs.query({ active: true, lastFocusedWindow: true })
+    const tabs = await chrome.tabs.query({ active: true, currentWindow: true })
     console.log({ tabs })
 
     for (let tab of tabs) {
