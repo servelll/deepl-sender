@@ -8,10 +8,13 @@ console.log('trying loading novelbin.js')
 
 isRoyalRoad = () => document.querySelector("meta[property='og:site_name']")?.getAttribute('content') == 'Royal Road'
 isNovelBin = () => document.querySelector('#nav div.navbar-header a')?.innerText.trim() == 'NOVEL BIN'
+isRanobes = () => document.querySelector('head > link:nth-child(7)').title.includes('RANOBES.NET')
 getContent = () =>
-    Array.from(document.querySelectorAll('#chr-content p, .chapter-content p'), (p) => p.textContent.trim())
+    Array.from(document.querySelectorAll('#chr-content p, .chapter-content p, #arrticle p'), (p) =>
+        p.textContent.trim()
+    )
 
-if (isNovelBin() || isRoyalRoad()) {
+if (isNovelBin() || isRoyalRoad() || isRanobes()) {
     let array = []
 
     //need to load-listener '.comments script' before executing
@@ -50,7 +53,7 @@ if (isNovelBin() || isRoyalRoad()) {
 
     let splitLessN, div, last_size
 
-    const place = document.querySelector('#chr-nav-top > div, div.row.nav-buttons')
+    const place = document.querySelector('#chr-nav-top > div, div.row.nav-buttons, article .center')
     div = document.createElement('div')
     div.style = 'display: flex; justify-content: center; grid-gap: 12px'
     if (place) place.parentNode.appendChild(div)
@@ -97,7 +100,9 @@ if (isNovelBin() || isRoyalRoad()) {
         console.log(request, sender)
 
         if (request.command == 'grab_text') {
-            const title = document.querySelector('#chapter .chr-text, div.page-container h1')?.innerText
+            const title = document.querySelector(
+                '#chapter .chr-text, div.page-container h1, #dle-speedbar > span'
+            )?.innerText
             sendResponse({ title, splitLessN })
         } else {
             throw Error('wrong command')

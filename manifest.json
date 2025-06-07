@@ -33,7 +33,8 @@
                 "https://top1novels.com/*",
                 "https://novelbin.lanovels.org/*",
                 "https://novelbjn.lanovels.org/*",
-                "https://www.royalroad.com/*"
+                "https://www.royalroad.com/*",
+                "https://ranobes.net/*"
             ],
             "js": [
                 "novelbin.js"
