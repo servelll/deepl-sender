@@ -4,6 +4,29 @@ function sleep(ms) {
     return new Promise((resolve) => setTimeout(resolve, ms))
 }
 
+async function sendMessageWithTimeout(tabId, message, timeout = 5000) {
+    return new Promise((resolve, reject) => {
+        let finished = false
+        const timer = setTimeout(() => {
+            finished = true
+            reject(new Error('sendMessage timeout'))
+        }, timeout)
+
+        chrome.tabs.sendMessage(tabId, message).then(
+            (response) => {
+                if (finished) return
+                clearTimeout(timer)
+                resolve(response)
+            },
+            (error) => {
+                if (finished) return
+                clearTimeout(timer)
+                reject(error)
+            }
+        )
+    })
+}
+
 const manifest = chrome.runtime.getManifest()
 const arr = manifest.content_scripts[1].matches
 console.log({ dt: new Date(), manifest, arr })
@@ -37,64 +60,74 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         console.log({ dt: new Date(), print: request.print })
     } else if (request.command == 'load_content') {
         ;(async () => {
-            const dynamicHosts = await chrome.scripting.getRegisteredContentScripts()
-            console.log({ dt: new Date(), dynamicHosts, test: [...arr, ...dynamicHosts[0].matches] })
+            try {
+                const dynamicHosts = await chrome.scripting.getRegisteredContentScripts()
+                const dynamicMatches = dynamicHosts?.flatMap((host) => host.matches ?? []) ?? []
+                console.log({ dt: new Date(), dynamicHosts, dynamicMatches })
 
-            //main hosts
-            table = []
-            const tabs = await chrome.tabs.query({
-                url: [...arr, ...dynamicHosts[0].matches]
-            })
-            const additional_origins = dynamicHosts[0].matches.map((a) => a.replaceAll('/*', '/'))
-            const result = await chrome.permissions.contains({
-                origins: additional_origins
-            })
-            if (!result) {
-                sendResponse({ text: 'no_host_permissions', array: additional_origins })
-                return true
-            }
-            console.log({ dt: new Date(), tabs })
-            for (let tab of tabs) {
-                if (!tab.id) continue
-
-                //const origins = [new URL(tab.url).origin]
-                //console.log({ origins })
-
-                for (let i = 0; i < 50; i++) {
-                    if (tab.discarded === true || tab.status === 'unloaded') {
-                        console.log(tab, 'reloading unloaded novelbin')
-                        await chrome.tabs.reload(tab.id)
-                        await sleep(2000)
-                        console.log('sleep 2000 after reload')
+                //main hosts
+                table = []
+                const tabs = await chrome.tabs.query({
+                    url: [...arr, ...dynamicMatches]
+                })
+                const additional_origins = dynamicMatches.map((a) => a.replaceAll('/*', '/'))
+                if (additional_origins.length > 0) {
+                    const result = await chrome.permissions.contains({
+                        origins: additional_origins
+                    })
+                    if (!result) {
+                        sendResponse({ text: 'no_host_permissions', array: additional_origins })
+                        return true
                     }
-                    if (i == 49) console.error('too many reloading tab', JSON.stringify(tab))
-                    try {
-                        const tabResponse = await chrome.tabs.sendMessage(tab.id, { command: 'grab_text' })
-                        console.log(tabResponse)
-                        if (!table.some((i) => i.title == tabResponse.title)) {
-                            table.push(tabResponse)
+                }
+                console.log({ dt: new Date(), tabs })
+                for (let tab of tabs) {
+                    if (!tab.id) continue
+
+                    let tabResponse = null
+                    for (let i = 0; i < 10; i++) {
+                        if (tab.discarded === true || tab.status === 'unloaded') {
+                            console.log(tab, 'reloading unloaded novelbin')
+                            await chrome.tabs.reload(tab.id)
+                            await sleep(2000)
+                            console.log('sleep 2000 after reload')
                         }
-                        break
-                    } catch (e) {
-                        console.log({ dt: new Date(), e })
-                        //console.error(e, 'tab', JSON.stringify(tab))
+                        if (i === 9) console.error('unable to communicate with tab after retries', JSON.stringify(tab))
+                        try {
+                            tabResponse = await sendMessageWithTimeout(tab.id, { command: 'grab_text' }, 3000)
+                            if (!tabResponse || !tabResponse.title || !Array.isArray(tabResponse.splitLessN)) {
+                                console.warn('invalid grab_text response', { tabId: tab.id, tabResponse })
+                                tabResponse = null
+                                throw new Error('invalid content response')
+                            }
+                            console.log(tabResponse)
+                            if (!table.some((item) => item.title == tabResponse.title)) {
+                                table.push(tabResponse)
+                            }
+                            break
+                        } catch (e) {
+                            console.log({ dt: new Date(), e, tabId: tab.id, retry: i })
+                        }
+                        await sleep(1000)
+                        console.log('sleep 1000 after error')
                     }
-                    await sleep(1000)
-                    console.log('sleep 1000 after error')
                 }
-            }
 
-            const tabs2 = await chrome.tabs.query({ url: 'https://www.deepl.com/*' })
-            for (let tab of tabs2) {
-                if (!tab.id) continue
-                if (tab.discarded === true || tab.status === 'unloaded') {
-                    console.log(tab, 'reloading unloaded deepl')
-                    await chrome.tabs.reload(tab.id)
+                const tabs2 = await chrome.tabs.query({ url: 'https://www.deepl.com/*' })
+                for (let tab of tabs2) {
+                    if (!tab.id) continue
+                    if (tab.discarded === true || tab.status === 'unloaded') {
+                        console.log(tab, 'reloading unloaded deepl')
+                        await chrome.tabs.reload(tab.id)
+                    }
+                    chrome.tabs.sendMessage(tab.id, { command: 'write_table_paste_text', table })
                 }
-                chrome.tabs.sendMessage(tab.id, { command: 'write_table_paste_text', table })
-            }
 
-            sendResponse(table)
+                sendResponse(table)
+            } catch (error) {
+                console.error('load_content failed', error)
+                sendResponse({ text: 'error', error: error?.message ?? String(error) })
+            }
         })()
     } else if (request.command == 'load') {
         sendResponse(table)

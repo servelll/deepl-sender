@@ -7,12 +7,25 @@
 console.log('trying loading novelbin.js')
 
 isRoyalRoad = () => document.querySelector("meta[property='og:site_name']")?.getAttribute('content') == 'Royal Road'
-isNovelBin = () => document.querySelector('#nav div.navbar-header a')?.innerText.trim() == 'NOVEL BIN'
-isRanobes = () => document.querySelector('head > link:nth-child(7)').title.includes('RANOBES.NET')
-getContent = () =>
-    Array.from(document.querySelectorAll('#chr-content p, .chapter-content p, #arrticle p'), (p) =>
-        p.textContent.trim()
-    )
+isNovelBin = () => document.querySelector('#nav div.navbar-header a')?.innerText.trim().toLowerCase() == 'novel bin'
+isRanobes = () => document.querySelector('head > link:nth-child(7)')?.title.includes('RANOBES.NET')
+console.log({ isRoyalRoad: isRoyalRoad(), isNovelBin: isNovelBin(), isRanobes: isRanobes() })
+getContent = () => {
+    const arr = []
+    const tags = ['#chr-content', '.chapter-content', '#arrticle']
+    for (let t of tags) {
+        const baseNode = document.querySelector(t)
+        if (!baseNode) continue
+        for (let child of baseNode.childNodes) {
+            //console.log(baseNode, child, child.nodeName, child.textContent)
+            const nodesNames = ['#text', 'p']
+            if (nodesNames.includes(child.nodeName.toLowerCase())) {
+                arr.push(child.textContent.trim())
+            }
+        }
+    }
+    return arr
+}
 
 if (isNovelBin() || isRoyalRoad() || isRanobes()) {
     let array = []
