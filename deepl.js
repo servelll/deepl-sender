@@ -51,6 +51,7 @@ function add_elements() {
     dTextarea = document.querySelector('d-textarea')
 
     const place =
+        document.querySelector('main > div') ??
         document.querySelector('main > script') ??
         document.querySelector('nav:not([class]) > div > div:not([class])') ??
         document.querySelector('nav > div > div')

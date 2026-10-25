@@ -8,7 +8,7 @@ console.log('trying loading novelbin.js')
 
 isRoyalRoad = () => document.querySelector("meta[property='og:site_name']")?.getAttribute('content') == 'Royal Road'
 isNovelBin = () => document.querySelector('#nav div.navbar-header a')?.innerText.trim().toLowerCase() == 'novel bin'
-isRanobes = () => document.querySelector('head > link:nth-child(7)')?.title.includes('RANOBES.NET')
+isRanobes = () => document.querySelector('head > link')?.title.includes('RANOBES.NET')
 console.log({ isRoyalRoad: isRoyalRoad(), isNovelBin: isNovelBin(), isRanobes: isRanobes() })
 getContent = () => {
     const arr = []
