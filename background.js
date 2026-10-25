@@ -27,6 +27,21 @@ async function sendMessageWithTimeout(tabId, message, timeout = 5000) {
     })
 }
 
+async function sendLoadProgress(tabIds, status, details, currentTable) {
+    const message = { command: 'load_content_progress', status, details }
+    if (currentTable) message.table = currentTable
+
+    await Promise.all(
+        tabIds.map(async (tabId) => {
+            try {
+                await chrome.tabs.sendMessage(tabId, message)
+            } catch (error) {
+                console.warn('unable to send load progress to tab', { tabId, error })
+            }
+        })
+    )
+}
+
 const manifest = chrome.runtime.getManifest()
 const arr = manifest.content_scripts[1].matches
 console.log({ dt: new Date(), manifest, arr })
@@ -61,6 +76,17 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     } else if (request.command == 'load_content') {
         ;(async () => {
             try {
+                const deepLTabs = await chrome.tabs.query({ url: 'https://www.deepl.com/*' })
+                const deepLTabIds = deepLTabs.flatMap((tab) => (tab.id ? [tab.id] : []))
+                if (sender.tab?.id && !deepLTabIds.includes(sender.tab.id)) {
+                    deepLTabIds.push(sender.tab.id)
+                }
+                await sendLoadProgress(
+                    deepLTabIds,
+                    'Подготовка списка вкладок…',
+                    'Поиск открытых страниц с текстом.'
+                )
+
                 const dynamicHosts = await chrome.scripting.getRegisteredContentScripts()
                 const dynamicMatches = dynamicHosts?.flatMap((host) => host.matches ?? []) ?? []
                 console.log({ dt: new Date(), dynamicHosts, dynamicMatches })
@@ -70,28 +96,55 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                 const tabs = await chrome.tabs.query({
                     url: [...arr, ...dynamicMatches]
                 })
+                await sendLoadProgress(
+                    deepLTabIds,
+                    `Найдено вкладок: ${tabs.length}.`,
+                    'Подключаюсь к страницам и собираю главы.',
+                    table
+                )
                 const additional_origins = dynamicMatches.map((a) => a.replaceAll('/*', '/'))
                 if (additional_origins.length > 0) {
                     const result = await chrome.permissions.contains({
                         origins: additional_origins
                     })
                     if (!result) {
+                        await sendLoadProgress(
+                            deepLTabIds,
+                            'Нужны разрешения для дополнительных сайтов.',
+                            additional_origins.join(' '),
+                            table
+                        )
                         sendResponse({ text: 'no_host_permissions', array: additional_origins })
                         return true
                     }
                 }
                 console.log({ dt: new Date(), tabs })
-                for (let tab of tabs) {
+                let successfulTabs = 0
+                let failedTabs = 0
+                for (let [tabIndex, tab] of tabs.entries()) {
                     if (!tab.id) continue
 
+                    const tabName = tab.title || tab.url || `Вкладка ${tabIndex + 1}`
                     let tabResponse = null
                     for (let i = 0; i < 10; i++) {
                         if (tab.discarded === true || tab.status === 'unloaded') {
+                            await sendLoadProgress(
+                                deepLTabIds,
+                                `Перезагружаю вкладку ${tabIndex + 1}/${tabs.length}: ${tabName}`,
+                                `Перед чтением главы, попытка ${i + 1}/10.`,
+                                table
+                            )
                             console.log(tab, 'reloading unloaded novelbin')
                             await chrome.tabs.reload(tab.id)
                             await sleep(2000)
                             console.log('sleep 2000 after reload')
                         }
+                        await sendLoadProgress(
+                            deepLTabIds,
+                            `Читаю вкладку ${tabIndex + 1}/${tabs.length}: ${tabName}`,
+                            `Попытка подключения ${i + 1}/10.`,
+                            table
+                        )
                         if (i === 9) console.error('unable to communicate with tab after retries', JSON.stringify(tab))
                         try {
                             tabResponse = await sendMessageWithTimeout(tab.id, { command: 'grab_text' }, 3000)
@@ -104,28 +157,65 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                             if (!table.some((item) => item.title == tabResponse.title)) {
                                 table.push(tabResponse)
                             }
+                            successfulTabs++
+                            await sendLoadProgress(
+                                deepLTabIds,
+                                `Получена глава ${successfulTabs}: ${tabResponse.title} (${tabIndex + 1}/${tabs.length}).`,
+                                `Собрано глав: ${table.length}.`,
+                                table
+                            )
                             break
                         } catch (e) {
                             console.log({ dt: new Date(), e, tabId: tab.id, retry: i })
+                            if (i === 9) {
+                                failedTabs++
+                                await sendLoadProgress(
+                                    deepLTabIds,
+                                    `Не удалось прочитать вкладку ${tabIndex + 1}/${tabs.length}: ${tabName}.`,
+                                    'Перехожу к следующей вкладке.',
+                                    table
+                                )
+                            } else {
+                                await sendLoadProgress(
+                                    deepLTabIds,
+                                    `Повтор подключения ${i + 2}/10: ${tabName}`,
+                                    'Предыдущая попытка не удалась; ожидаю ответа страницы.',
+                                    table
+                                )
+                            }
                         }
                         await sleep(1000)
                         console.log('sleep 1000 after error')
                     }
                 }
 
-                const tabs2 = await chrome.tabs.query({ url: 'https://www.deepl.com/*' })
-                for (let tab of tabs2) {
+                for (let tab of deepLTabs) {
                     if (!tab.id) continue
                     if (tab.discarded === true || tab.status === 'unloaded') {
                         console.log(tab, 'reloading unloaded deepl')
                         await chrome.tabs.reload(tab.id)
                     }
-                    chrome.tabs.sendMessage(tab.id, { command: 'write_table_paste_text', table })
+                    try {
+                        await chrome.tabs.sendMessage(tab.id, { command: 'write_table_paste_text', table })
+                    } catch (error) {
+                        console.warn('unable to send final table to tab', { tabId: tab.id, error })
+                    }
                 }
 
+                await sendLoadProgress(
+                    deepLTabIds,
+                    `Готово: обработано вкладок ${successfulTabs}; уникальных глав ${table.length}; ошибок чтения ${failedTabs}.`,
+                    'Список глав обновлен.',
+                    table
+                )
                 sendResponse(table)
             } catch (error) {
                 console.error('load_content failed', error)
+                await sendLoadProgress(
+                    sender.tab?.id ? [sender.tab.id] : [],
+                    `Ошибка загрузки: ${error?.message ?? String(error)}`,
+                    'Не удалось завершить сбор глав.'
+                )
                 sendResponse({ text: 'error', error: error?.message ?? String(error) })
             }
         })()

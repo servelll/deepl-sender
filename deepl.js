@@ -1,5 +1,13 @@
 const div2 = document.createElement('div')
 let dTextarea = document.querySelector('d-textarea')
+let statusNode = null
+
+function update_status(status, details = '') {
+    if (!statusNode) return
+    statusNode.textContent = details ? `${status}\n${details}` : status
+    statusNode.title = details || status
+}
+
 function draw_ui(input) {
     div2.innerHTML = ''
     for (let page of input) {
@@ -62,6 +70,8 @@ function add_elements() {
 
     const z = document.createElement('z')
     z.id = 'my_p'
+    z.style.whiteSpace = 'pre-wrap'
+    statusNode = z
 
     const z2 = document.createElement('z')
     z2.id = 'my_p2'
@@ -85,9 +95,19 @@ function add_elements() {
     button.id = 'my_button'
     button.textContent = 'Try to catch'
     button.onclick = () => {
+        button.disabled = true
+        update_status('Запускаю сбор глав…', 'Подготовка списка открытых вкладок.')
         chrome.runtime.sendMessage({ command: 'load_content' }, async function (response) {
+            button.disabled = false
+            if (chrome.runtime.lastError) {
+                update_status('Ошибка связи с background.', chrome.runtime.lastError.message)
+                return
+            }
             console.log('response', response)
-            if (!response) return
+            if (!response) {
+                update_status('Не получен ответ от background.')
+                return
+            }
 
             //ask here to escape chrome error with 'Request the permissions from within a user gesture'
             if (response?.text == 'no_host_permissions' && response?.array) {
@@ -101,8 +121,9 @@ function add_elements() {
                     })
                 }
                 */
-                z.textContent = 'no host permissions'
-                z.title = response?.array.join(' ')
+                update_status('Нужны разрешения для дополнительных сайтов.', response.array.join(' '))
+            } else if (response?.text == 'error') {
+                update_status('Ошибка загрузки.', response.error || 'Не удалось завершить сбор глав.')
             } else {
                 draw_ui(response)
             }
@@ -120,6 +141,9 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
     if (request.command == 'write_table_paste_text') {
         draw_ui(request.table)
+    } else if (request.command == 'load_content_progress') {
+        update_status(request.status, request.details)
+        if (Array.isArray(request.table)) draw_ui(request.table)
     } else if (request.command == 'recreate_try') {
         add_elements()
     } else {
