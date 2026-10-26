@@ -9,24 +9,26 @@ function update_status(status, details = '') {
 }
 
 function draw_ui(input) {
-    div2.innerHTML = ''
-    for (let page of input) {
-        for (let [i, row] of page.splitLessN.entries()) {
-            const obj = document.createElement('div')
-            obj.textContent = `${page.title} [${i}]`
-            obj.title = `sum ${row.sum}`
-            obj.onclick = function () {
-                for (let d of Array.from(div2.children)) {
-                    d.removeAttribute('style')
-                }
-                this.style.backgroundColor = 'red'
-                dTextarea.firstElementChild.textContent = row.current.join('\n')
-                setTimeout(() => {
-                    dTextarea.dispatchEvent(new Event('change', { bubbles: true }))
-                })
+    const rows = input.flatMap((page) =>
+        page.splitLessN.map((row, index) => ({ page, row, index }))
+    )
+    if (rows.length < div2.children.length) div2.innerHTML = ''
+
+    for (let { page, row, index } of rows.slice(div2.children.length)) {
+        const obj = document.createElement('div')
+        obj.textContent = `${page.title} [${index}]`
+        obj.title = `sum ${row.sum}`
+        obj.onclick = function () {
+            for (let d of Array.from(div2.children)) {
+                d.removeAttribute('style')
             }
-            div2.appendChild(obj)
+            this.style.backgroundColor = 'red'
+            dTextarea.firstElementChild.textContent = row.current.join('\n')
+            setTimeout(() => {
+                dTextarea.dispatchEvent(new Event('change', { bubbles: true }))
+            })
         }
+        div2.appendChild(obj)
     }
 }
 
@@ -87,6 +89,7 @@ function add_elements() {
             while (result.some((item) => typeof item === 'string' && item.includes('\n'))) {
                 result = result.flatMap((item) => (typeof item === 'string' ? item.split('\n') : item))
             }
+            div2.innerHTML = ''
             draw_ui([{ title: 'clipboard', splitLessN: calc(5000, result) }])
         })
     }
