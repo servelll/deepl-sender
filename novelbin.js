@@ -32,39 +32,8 @@ if (isNovelBin() || isRoyalRoad() || isRanobes()) {
 
     //need to load-listener '.comments script' before executing
     console.log('added window listener')
-    const insideListenerFunction = function () {
-        console.log('inside old main loading novelbin.js')
-        array = getContent()
 
-        const replaceScript = document.querySelector('.comments script')
-        if (!replaceScript) {
-            console.log({ replaceScript, array })
-            //return
-        }
-        //const replaceMatch = replaceScript.textContent.match(/(?<=ent.replace\(\")[^\"]+/g)
-        //if (!replaceMatch) throw Error('somehow blank replace now')
-        //const replaceText = decode(replaceMatch?.[0]) ?? ''
-        //array = array.map((t) => t.replace(replaceText, ''))
-
-        //console.log({ replaceScript, replaceMatch, replaceText, array })
-        //console.log(document.querySelector('#chr-content').innerHTML)
-
-        calc(last_size)
-
-        //add last_chapter_number
-        //add MUTATION OBJECT listener TODO
-        /*
-        const place = document.querySelectorAll('#chapter a.toggle-nav-open > span')
-        const chapterNode = document.querySelector('#chr-nav-top > div.btn-group > select')
-        console.log({ chapterNode })
-        const number = chapterNode.lastElementChild.textContent.match(/(\d+)/)?.[0]
-        place.textContent = number
-        */
-    }
-
-    window.addEventListener('after_size_loaded', insideListenerFunction)
-
-    let splitLessN, div, last_size
+    let splitLessN, div, last_size = 5000
 
     const place = document.querySelector('#chr-nav-top > div, div.row.nav-buttons, article .center')
     div = document.createElement('div')
@@ -92,6 +61,28 @@ if (isNovelBin() || isRoyalRoad() || isRanobes()) {
         })
         draw_ui(splitLessN)
     }
+    function refreshContent() {
+        const latestArray = getContent()
+        const changed =
+            latestArray.length !== array.length || latestArray.some((text, index) => text !== array[index])
+
+        if (changed || !splitLessN) {
+            array = latestArray
+            calc(last_size)
+        }
+    }
+
+    const insideListenerFunction = function () {
+        console.log('inside old main loading novelbin.js')
+        refreshContent()
+
+        const replaceScript = document.querySelector('.comments script')
+        if (!replaceScript) {
+            console.log({ replaceScript, array })
+        }
+    }
+    window.addEventListener('after_size_loaded', insideListenerFunction)
+
     chrome.storage.local.get('size').then((loaded_size) => {
         console.log('inside storage.local.get size')
         const size = loaded_size?.size ?? 5000
@@ -104,7 +95,8 @@ if (isNovelBin() || isRoyalRoad() || isRanobes()) {
     })
     chrome.storage.local.onChanged.addListener(function (changes) {
         if (changes?.size?.newValue) {
-            calc(changes.size.newValue)
+            last_size = changes.size.newValue
+            calc(last_size)
             console.log(changes.size.newValue, splitLessN)
         }
     })
@@ -113,6 +105,7 @@ if (isNovelBin() || isRoyalRoad() || isRanobes()) {
         console.log(request, sender)
 
         if (request.command == 'grab_text') {
+            refreshContent()
             const title = document.querySelector(
                 '#chapter .chr-text, div.page-container h1, #dle-speedbar > span'
             )?.innerText
